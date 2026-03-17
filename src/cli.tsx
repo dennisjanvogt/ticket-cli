@@ -1,6 +1,6 @@
 import { render } from 'ink';
 import React from 'react';
-import { App } from './tui/App.js';
+import { Platform } from './tui/Platform.js';
 import { setProjectOverride } from './store.js';
 import { cmdAdd } from './commands/add.js';
 import { cmdMove } from './commands/move.js';
@@ -64,7 +64,7 @@ switch (command) {
     // Enter alternate screen buffer for fullscreen TUI
     process.stdout.write('\x1b[?1049h');
     process.stdout.write('\x1b[H');
-    const instance = render(React.createElement(App));
+    const instance = render(React.createElement(Platform));
     instance.waitUntilExit().then(() => {
       // Restore main screen buffer
       process.stdout.write('\x1b[?1049l');

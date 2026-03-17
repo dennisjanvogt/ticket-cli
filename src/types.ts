@@ -45,3 +45,39 @@ export interface TicketStore {
   project: Project;
   tickets: Ticket[];
 }
+
+// --- Platform Types ---
+
+export type UserRole = 'admin' | 'user';
+
+export interface User {
+  id: number;
+  username: string;
+  display_name: string;
+  role: UserRole;
+  last_login: string | null;
+  created_at: string;
+}
+
+export interface TimeEntry {
+  id: number;
+  user_id: number;
+  project_id: number;
+  ticket_id: number | null;
+  description: string;
+  duration_minutes: number;
+  date: string;
+  created_at: string;
+  // Joined fields
+  project_name?: string;
+  ticket_title?: string;
+}
+
+export interface AppSetting {
+  key: string;
+  value: string;
+}
+
+export type AppId = 'tickets' | 'time-tracking' | 'users' | 'settings';
+
+export type ScreenMode = 'login' | 'home' | 'app';
