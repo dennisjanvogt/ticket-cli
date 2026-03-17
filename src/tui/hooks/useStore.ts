@@ -1,10 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
-import { watch, existsSync } from 'node:fs';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { watch, statSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { loadStore, getStorePath } from '../../store.js';
 import type { TicketStore } from '../../types.js';
 
 export function useStore(): TicketStore {
   const [store, setStore] = useState<TicketStore>(() => loadStore());
+  const lastMtimeRef = useRef<number>(0);
 
   const reload = useCallback(() => {
     setStore(loadStore());
@@ -12,41 +14,52 @@ export function useStore(): TicketStore {
 
   useEffect(() => {
     const filePath = getStorePath();
+    const dir = dirname(filePath);
+    const fileName = filePath.split('/').pop()!;
 
-    // Reload immediately
-    reload();
-
-    if (!existsSync(filePath)) {
-      // Poll until file exists
-      const interval = setInterval(() => {
-        if (existsSync(filePath)) {
-          reload();
-          clearInterval(interval);
-          startWatching();
-        }
-      }, 500);
-      return () => clearInterval(interval);
-    }
-
-    let watcher: ReturnType<typeof watch> | null = null;
-    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-
-    function startWatching() {
+    function getMtime(): number {
       try {
-        watcher = watch(filePath, () => {
-          if (debounceTimer) clearTimeout(debounceTimer);
-          debounceTimer = setTimeout(reload, 100);
-        });
+        return statSync(filePath).mtimeMs;
       } catch {
-        // fs.watch can fail on some systems
+        return 0;
       }
     }
 
-    startWatching();
+    function checkAndReload() {
+      const mtime = getMtime();
+      if (mtime !== lastMtimeRef.current) {
+        lastMtimeRef.current = mtime;
+        reload();
+      }
+    }
+
+    // Initial load
+    lastMtimeRef.current = getMtime();
+
+    // Watch the DIRECTORY instead of the file —
+    // atomic writes (tmp + rename) replace the inode,
+    // which kills file-level fs.watch watchers.
+    let watcher: ReturnType<typeof watch> | null = null;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+    try {
+      watcher = watch(dir, (_, changedFile) => {
+        if (changedFile === fileName) {
+          if (debounceTimer) clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(checkAndReload, 100);
+        }
+      });
+    } catch {
+      // fs.watch can fail on some systems
+    }
+
+    // Fallback polling every 500ms in case fs.watch misses events
+    const pollInterval = setInterval(checkAndReload, 500);
 
     return () => {
       if (watcher) watcher.close();
       if (debounceTimer) clearTimeout(debounceTimer);
+      clearInterval(pollInterval);
     };
   }, [reload]);
 
