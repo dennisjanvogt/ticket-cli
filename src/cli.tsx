@@ -9,6 +9,7 @@ import { cmdView } from './commands/view.js';
 import { cmdEdit } from './commands/edit.js';
 import { cmdDelete } from './commands/delete.js';
 import { cmdBoard } from './commands/board.js';
+import { cmdInfo } from './commands/info.js';
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -36,19 +37,10 @@ switch (command) {
   case 'board':
     cmdBoard();
     break;
+  case 'info':
   case '--help':
   case '-h':
-    console.log(`Usage: ticket [command]
-
-Commands:
-  (none)          Open interactive TUI board
-  add "title"     Create ticket [--desc "..."] [--column todo] [--priority medium] [--tag bug]
-  move <id> <col> Move ticket to column (backlog|todo|in-progress|done)
-  list            List tickets [--column todo] [--json]
-  view <id>       View ticket details
-  edit <id>       Edit ticket [--title "..."] [--desc "..."] [--priority ...] [--column ...]
-  delete <id>     Delete ticket
-  board           Static board print`);
+    cmdInfo();
     break;
   default:
     // No command or unknown → open TUI
