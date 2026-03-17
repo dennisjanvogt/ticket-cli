@@ -42,8 +42,8 @@ export function cmdInfo(): void {
   console.log(`  ${chalk.red('◆')} critical   ${chalk.yellow('●')} high   ${chalk.blue('○')} medium   ${chalk.dim('·')} low\n`);
 
   console.log(chalk.bold('SPEICHERUNG'));
-  console.log('  Tickets werden in .tickets.json im aktuellen Verzeichnis gespeichert.');
-  console.log('  Jedes Projekt kann sein eigenes Board haben.\n');
+  console.log('  Tickets werden in einer SQLite-Datenbank (.tickets.db) im aktuellen');
+  console.log('  Verzeichnis gespeichert. Jedes Projekt kann sein eigenes Board haben.\n');
 
   console.log(chalk.bold('LIVE-UPDATES'));
   console.log('  Das TUI aktualisiert sich automatisch wenn Tickets per CLI');

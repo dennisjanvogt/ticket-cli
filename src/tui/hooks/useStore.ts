@@ -1,66 +1,29 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { watch, statSync } from 'node:fs';
-import { dirname } from 'node:path';
-import { loadStore, getStorePath } from '../../store.js';
+import { loadStore } from '../../store.js';
 import type { TicketStore } from '../../types.js';
 
 export function useStore(): TicketStore {
   const [store, setStore] = useState<TicketStore>(() => loadStore());
-  const lastMtimeRef = useRef<number>(0);
+  const lastJsonRef = useRef<string>('');
 
   const reload = useCallback(() => {
-    setStore(loadStore());
+    const fresh = loadStore();
+    const json = JSON.stringify(fresh.tickets);
+    if (json !== lastJsonRef.current) {
+      lastJsonRef.current = json;
+      setStore(fresh);
+    }
   }, []);
 
   useEffect(() => {
-    const filePath = getStorePath();
-    const dir = dirname(filePath);
-    const fileName = filePath.split('/').pop()!;
-
-    function getMtime(): number {
-      try {
-        return statSync(filePath).mtimeMs;
-      } catch {
-        return 0;
-      }
-    }
-
-    function checkAndReload() {
-      const mtime = getMtime();
-      if (mtime !== lastMtimeRef.current) {
-        lastMtimeRef.current = mtime;
-        reload();
-      }
-    }
-
     // Initial load
-    lastMtimeRef.current = getMtime();
+    reload();
 
-    // Watch the DIRECTORY instead of the file —
-    // atomic writes (tmp + rename) replace the inode,
-    // which kills file-level fs.watch watchers.
-    let watcher: ReturnType<typeof watch> | null = null;
-    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    // Poll every 300ms — SQLite WAL mode makes fs.watch unreliable,
+    // and the query is instant on local SQLite
+    const interval = setInterval(reload, 300);
 
-    try {
-      watcher = watch(dir, (_, changedFile) => {
-        if (changedFile === fileName) {
-          if (debounceTimer) clearTimeout(debounceTimer);
-          debounceTimer = setTimeout(checkAndReload, 100);
-        }
-      });
-    } catch {
-      // fs.watch can fail on some systems
-    }
-
-    // Fallback polling every 500ms in case fs.watch misses events
-    const pollInterval = setInterval(checkAndReload, 500);
-
-    return () => {
-      if (watcher) watcher.close();
-      if (debounceTimer) clearTimeout(debounceTimer);
-      clearInterval(pollInterval);
-    };
+    return () => clearInterval(interval);
   }, [reload]);
 
   return store;

@@ -1,29 +1,49 @@
-import { readFileSync, writeFileSync, existsSync, renameSync } from 'node:fs';
+import Database from 'better-sqlite3';
 import { join } from 'node:path';
-import { tmpdir } from 'node:os';
-import { randomBytes } from 'node:crypto';
 import type { Ticket, TicketStore, Column, Priority } from './types.js';
 
-const STORE_FILE = join(process.cwd(), '.tickets.json');
+const DB_PATH = join(process.cwd(), '.tickets.db');
 
-function defaultStore(): TicketStore {
-  return { next_id: 1, tickets: [] };
+let _db: Database.Database | null = null;
+
+function getDb(): Database.Database {
+  if (!_db) {
+    _db = new Database(DB_PATH);
+    _db.pragma('journal_mode = WAL');
+    _db.pragma('foreign_keys = ON');
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS tickets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        "column" TEXT NOT NULL DEFAULT 'backlog',
+        priority TEXT NOT NULL DEFAULT 'medium',
+        tags TEXT NOT NULL DEFAULT '[]',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    `);
+  }
+  return _db;
+}
+
+function rowToTicket(row: Record<string, unknown>): Ticket {
+  return {
+    id: row.id as number,
+    title: row.title as string,
+    description: row.description as string,
+    column: row.column as Column,
+    priority: row.priority as Priority,
+    tags: JSON.parse(row.tags as string) as string[],
+    created_at: row.created_at as string,
+    updated_at: row.updated_at as string,
+  };
 }
 
 export function loadStore(): TicketStore {
-  if (!existsSync(STORE_FILE)) return defaultStore();
-  try {
-    const data = readFileSync(STORE_FILE, 'utf-8');
-    return JSON.parse(data) as TicketStore;
-  } catch {
-    return defaultStore();
-  }
-}
-
-function saveStore(store: TicketStore): void {
-  const tmp = join(tmpdir(), `tickets-${randomBytes(8).toString('hex')}.json`);
-  writeFileSync(tmp, JSON.stringify(store, null, 2) + '\n', 'utf-8');
-  renameSync(tmp, STORE_FILE);
+  const db = getDb();
+  const rows = db.prepare('SELECT * FROM tickets ORDER BY id').all() as Record<string, unknown>[];
+  return { tickets: rows.map(rowToTicket) };
 }
 
 export function addTicket(opts: {
@@ -33,70 +53,82 @@ export function addTicket(opts: {
   priority?: Priority;
   tags?: string[];
 }): Ticket {
-  const store = loadStore();
+  const db = getDb();
   const now = new Date().toISOString();
-  const ticket: Ticket = {
-    id: store.next_id++,
-    title: opts.title,
-    description: opts.description ?? '',
-    column: opts.column ?? 'backlog',
-    priority: opts.priority ?? 'medium',
-    tags: opts.tags ?? [],
-    created_at: now,
-    updated_at: now,
-  };
-  store.tickets.push(ticket);
-  saveStore(store);
-  return ticket;
+  const result = db
+    .prepare(
+      `INSERT INTO tickets (title, description, "column", priority, tags, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      opts.title,
+      opts.description ?? '',
+      opts.column ?? 'backlog',
+      opts.priority ?? 'medium',
+      JSON.stringify(opts.tags ?? []),
+      now,
+      now
+    );
+
+  return getTicket(Number(result.lastInsertRowid))!;
 }
 
 export function moveTicket(id: number, column: Column): Ticket | null {
-  const store = loadStore();
-  const ticket = store.tickets.find((t) => t.id === id);
-  if (!ticket) return null;
-  ticket.column = column;
-  ticket.updated_at = new Date().toISOString();
-  saveStore(store);
-  return ticket;
+  const db = getDb();
+  const now = new Date().toISOString();
+  const changes = db
+    .prepare('UPDATE tickets SET "column" = ?, updated_at = ? WHERE id = ?')
+    .run(column, now, id).changes;
+  if (changes === 0) return null;
+  return getTicket(id);
 }
 
 export function editTicket(
   id: number,
   updates: Partial<Pick<Ticket, 'title' | 'description' | 'priority' | 'column' | 'tags'>>
 ): Ticket | null {
-  const store = loadStore();
-  const ticket = store.tickets.find((t) => t.id === id);
-  if (!ticket) return null;
-  if (updates.title !== undefined) ticket.title = updates.title;
-  if (updates.description !== undefined) ticket.description = updates.description;
-  if (updates.priority !== undefined) ticket.priority = updates.priority;
-  if (updates.column !== undefined) ticket.column = updates.column;
-  if (updates.tags !== undefined) ticket.tags = updates.tags;
-  ticket.updated_at = new Date().toISOString();
-  saveStore(store);
-  return ticket;
+  const db = getDb();
+  const existing = getTicket(id);
+  if (!existing) return null;
+
+  const now = new Date().toISOString();
+  const title = updates.title ?? existing.title;
+  const description = updates.description ?? existing.description;
+  const priority = updates.priority ?? existing.priority;
+  const column = updates.column ?? existing.column;
+  const tags = updates.tags ?? existing.tags;
+
+  db.prepare(
+    `UPDATE tickets SET title = ?, description = ?, priority = ?, "column" = ?, tags = ?, updated_at = ?
+     WHERE id = ?`
+  ).run(title, description, priority, column, JSON.stringify(tags), now, id);
+
+  return getTicket(id);
 }
 
 export function deleteTicket(id: number): boolean {
-  const store = loadStore();
-  const idx = store.tickets.findIndex((t) => t.id === id);
-  if (idx === -1) return false;
-  store.tickets.splice(idx, 1);
-  saveStore(store);
-  return true;
+  const db = getDb();
+  const changes = db.prepare('DELETE FROM tickets WHERE id = ?').run(id).changes;
+  return changes > 0;
 }
 
 export function getTicket(id: number): Ticket | null {
-  const store = loadStore();
-  return store.tickets.find((t) => t.id === id) ?? null;
+  const db = getDb();
+  const row = db.prepare('SELECT * FROM tickets WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+  if (!row) return null;
+  return rowToTicket(row);
 }
 
 export function listTickets(column?: Column): Ticket[] {
-  const store = loadStore();
-  if (column) return store.tickets.filter((t) => t.column === column);
-  return store.tickets;
+  const db = getDb();
+  if (column) {
+    const rows = db.prepare('SELECT * FROM tickets WHERE "column" = ? ORDER BY id').all(column) as Record<string, unknown>[];
+    return rows.map(rowToTicket);
+  }
+  const rows = db.prepare('SELECT * FROM tickets ORDER BY id').all() as Record<string, unknown>[];
+  return rows.map(rowToTicket);
 }
 
 export function getStorePath(): string {
-  return STORE_FILE;
+  return DB_PATH;
 }

@@ -22,6 +22,5 @@ export interface Ticket {
 }
 
 export interface TicketStore {
-  next_id: number;
   tickets: Ticket[];
 }

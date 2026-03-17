@@ -1,4 +1,6 @@
 node_modules/
 dist/
-.tickets.json
+.tickets.db
+.tickets.db-wal
+.tickets.db-shm
 *.tsbuildinfo
