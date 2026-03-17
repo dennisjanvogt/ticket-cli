@@ -17,7 +17,7 @@ export function Header({ store }: Props) {
     <Box flexDirection="column">
       <Box paddingX={1}>
         <Text bold color={colors.headerFg} backgroundColor={colors.headerBg}>
-          {' '}📋 Ticket Board {' '}
+          {' '}📋 {store.project.name}{' '}
         </Text>
         <Text> </Text>
         <Text dimColor>{counts.join('  ·  ')}  ({total} total)</Text>

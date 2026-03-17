@@ -1,11 +1,17 @@
 import chalk from 'chalk';
+import { getProject, getStorePath } from '../store.js';
 
 export function cmdInfo(): void {
+  const project = getProject();
   console.log(chalk.bold.bgBlue.white(' 📋 Ticket CLI ') + ' — Interaktives Kanban Board im Terminal\n');
+
+  console.log(chalk.bold('AKTUELLES PROJEKT'));
+  console.log(`  ${chalk.cyan(project.name)} (${chalk.dim(project.path)})\n`);
 
   console.log(chalk.bold('USAGE'));
   console.log('  ticket                        TUI öffnen (interaktives Board)');
-  console.log('  ticket <command> [options]     Befehl ausführen\n');
+  console.log('  ticket <command> [options]     Befehl ausführen');
+  console.log('  ticket --project <name> ...   Anderes Projekt ansprechen\n');
 
   console.log(chalk.bold('COMMANDS'));
   console.log(`  ${chalk.cyan('add')} "title"                  Neues Ticket erstellen`);
@@ -26,6 +32,7 @@ export function cmdInfo(): void {
   console.log(`      --tag <name>              Tags setzen (mehrfach verwendbar)`);
   console.log(`  ${chalk.cyan('delete')} <id>                  Ticket löschen`);
   console.log(`  ${chalk.cyan('board')}                         Statischer Board-Print`);
+  console.log(`  ${chalk.cyan('projects')}                      Alle Projekte anzeigen`);
   console.log(`  ${chalk.cyan('info')}                          Diese Hilfe anzeigen\n`);
 
   console.log(chalk.bold('TUI SHORTCUTS'));
@@ -42,8 +49,9 @@ export function cmdInfo(): void {
   console.log(`  ${chalk.red('◆')} critical   ${chalk.yellow('●')} high   ${chalk.blue('○')} medium   ${chalk.dim('·')} low\n`);
 
   console.log(chalk.bold('SPEICHERUNG'));
-  console.log('  Tickets werden in einer SQLite-Datenbank (.tickets.db) im aktuellen');
-  console.log('  Verzeichnis gespeichert. Jedes Projekt kann sein eigenes Board haben.\n');
+  console.log(`  Globale SQLite-Datenbank: ${chalk.dim(getStorePath())}`);
+  console.log('  Jedes Verzeichnis wird automatisch als eigenes Projekt erkannt.');
+  console.log('  Mit --project <name> kann ein beliebiges Projekt angesprochen werden.\n');
 
   console.log(chalk.bold('LIVE-UPDATES'));
   console.log('  Das TUI aktualisiert sich automatisch wenn Tickets per CLI');
@@ -58,4 +66,8 @@ export function cmdInfo(): void {
   console.log('  ticket list --json');
   console.log(chalk.dim('  # Board im Terminal anzeigen'));
   console.log('  ticket board');
+  console.log(chalk.dim('  # Ticket in anderem Projekt erstellen'));
+  console.log('  ticket --project my-api add "Fix auth" --priority critical');
+  console.log(chalk.dim('  # Alle Projekte anzeigen'));
+  console.log('  ticket projects');
 }

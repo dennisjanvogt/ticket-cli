@@ -10,8 +10,16 @@ export const COLUMN_LABELS: Record<Column, string> = {
   done: 'Done',
 };
 
+export interface Project {
+  id: number;
+  name: string;
+  path: string;
+  created_at: string;
+}
+
 export interface Ticket {
   id: number;
+  project_id: number;
   title: string;
   description: string;
   column: Column;
@@ -22,5 +30,6 @@ export interface Ticket {
 }
 
 export interface TicketStore {
+  project: Project;
   tickets: Ticket[];
 }

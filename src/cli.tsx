@@ -1,7 +1,7 @@
-import { parseArgs } from 'node:util';
 import { render } from 'ink';
 import React from 'react';
 import { App } from './tui/App.js';
+import { setProjectOverride } from './store.js';
 import { cmdAdd } from './commands/add.js';
 import { cmdMove } from './commands/move.js';
 import { cmdList } from './commands/list.js';
@@ -10,8 +10,18 @@ import { cmdEdit } from './commands/edit.js';
 import { cmdDelete } from './commands/delete.js';
 import { cmdBoard } from './commands/board.js';
 import { cmdInfo } from './commands/info.js';
+import { cmdProjects } from './commands/projects.js';
 
-const args = process.argv.slice(2);
+const rawArgs = process.argv.slice(2);
+
+// Extract global --project flag before command parsing
+let args = [...rawArgs];
+const projectIdx = args.indexOf('--project');
+if (projectIdx !== -1 && args[projectIdx + 1]) {
+  setProjectOverride(args[projectIdx + 1]);
+  args.splice(projectIdx, 2);
+}
+
 const command = args[0];
 const rest = args.slice(1);
 
@@ -36,6 +46,9 @@ switch (command) {
     break;
   case 'board':
     cmdBoard();
+    break;
+  case 'projects':
+    cmdProjects(rest);
     break;
   case 'info':
   case '--help':
