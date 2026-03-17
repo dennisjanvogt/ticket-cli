@@ -7,6 +7,7 @@ export const colors = {
   inactiveBorder: '#64748b',
   selectedMarker: '#06b6d4',
   footerDim: '#94a3b8',
+  success: '#22c55e',
 
   priority: {
     critical: '#ef4444',
@@ -23,6 +24,12 @@ export const colors = {
   } satisfies Record<Column, string>,
 
   tag: '#06b6d4',
+
+  due: {
+    overdue: '#ef4444',
+    soon: '#eab308',
+    normal: '#6b7280',
+  },
 };
 
 export const PRIORITY_SYMBOLS: Record<Priority, string> = {

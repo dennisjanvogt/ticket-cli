@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
 import { Box, Text, useInput, useApp } from 'ink';
-import type { Column as ColumnType, Priority, Ticket } from '../types.js';
-import { COLUMNS } from '../types.js';
-import { addTicket, moveTicket, deleteTicket } from '../store.js';
+import type { Column as ColumnType, Priority, Ticket, Subtask } from '../types.js';
+import { COLUMNS, PRIORITIES } from '../types.js';
+import { addTicket, moveTicket, deleteTicket, editTicket, getSubtasks, toggleSubtask, addSubtask } from '../store.js';
 import { PRIORITY_ORDER } from '../utils/format.js';
 import { useStore } from './hooks/useStore.js';
 import { useTerminalSize } from './hooks/useTerminalSize.js';
@@ -13,8 +13,10 @@ import { TicketDetail } from './components/TicketDetail.js';
 import { CreateModal } from './components/CreateModal.js';
 import { SearchBar } from './components/SearchBar.js';
 import { ConfirmDialog } from './components/ConfirmDialog.js';
+import { InlineEdit } from './components/InlineEdit.js';
+import { SubtaskInput } from './components/SubtaskInput.js';
 
-type Mode = 'board' | 'detail' | 'create' | 'search' | 'confirm-delete';
+type Mode = 'board' | 'detail' | 'create' | 'search' | 'confirm-delete' | 'inline-edit' | 'add-subtask';
 
 export function App() {
   const store = useStore();
@@ -32,6 +34,9 @@ export function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [detailTicket, setDetailTicket] = useState<Ticket | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Ticket | null>(null);
+  const [editTarget, setEditTarget] = useState<Ticket | null>(null);
+  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+  const [selectedSubtask, setSelectedSubtask] = useState(0);
 
   const getFilteredTickets = useCallback(() => {
     if (!searchQuery) return store.tickets;
@@ -64,6 +69,25 @@ export function App() {
     [getFilteredTickets]
   );
 
+  function cyclePriority(ticket: Ticket): Ticket | null {
+    const idx = PRIORITIES.indexOf(ticket.priority);
+    const next = PRIORITIES[(idx + 1) % PRIORITIES.length]!;
+    return editTicket(ticket.id, { priority: next });
+  }
+
+  function openDetail(ticket: Ticket) {
+    setDetailTicket(ticket);
+    setSubtasks(getSubtasks(ticket.id));
+    setSelectedSubtask(0);
+    setMode('detail');
+  }
+
+  function refreshDetail() {
+    if (detailTicket) {
+      setSubtasks(getSubtasks(detailTicket.id));
+    }
+  }
+
   useInput((input, key) => {
     if (mode !== 'board' && mode !== 'detail') return;
 
@@ -80,6 +104,14 @@ export function App() {
       }
 
       if (detailTicket) {
+        if (key.upArrow && subtasks.length > 0) {
+          setSelectedSubtask((i) => Math.max(0, i - 1));
+          return;
+        }
+        if (key.downArrow && subtasks.length > 0) {
+          setSelectedSubtask((i) => Math.min(subtasks.length - 1, i + 1));
+          return;
+        }
         if (input === 'm') {
           const colIdx = COLUMNS.indexOf(detailTicket.column);
           if (colIdx < COLUMNS.length - 1) {
@@ -94,6 +126,23 @@ export function App() {
             const result = moveTicket(detailTicket.id, COLUMNS[colIdx - 1]!);
             if (result) setDetailTicket(result);
           }
+          return;
+        }
+        if (input === 'p') {
+          const result = cyclePriority(detailTicket);
+          if (result) setDetailTicket(result);
+          return;
+        }
+        if (input === 't' && subtasks.length > 0) {
+          const st = subtasks[selectedSubtask];
+          if (st) {
+            toggleSubtask(st.id);
+            refreshDetail();
+          }
+          return;
+        }
+        if (input === 'a') {
+          setMode('add-subtask');
           return;
         }
         if (input === 'x') {
@@ -135,10 +184,7 @@ export function App() {
 
     if (key.return) {
       const ticket = getSelectedTicket();
-      if (ticket) {
-        setDetailTicket(ticket);
-        setMode('detail');
-      }
+      if (ticket) openDetail(ticket);
       return;
     }
 
@@ -149,6 +195,21 @@ export function App() {
 
     if (input === '/') {
       setMode('search');
+      return;
+    }
+
+    if (input === 'p') {
+      const ticket = getSelectedTicket();
+      if (ticket) cyclePriority(ticket);
+      return;
+    }
+
+    if (input === 'e') {
+      const ticket = getSelectedTicket();
+      if (ticket) {
+        setEditTarget(ticket);
+        setMode('inline-edit');
+      }
       return;
     }
 
@@ -186,18 +247,17 @@ export function App() {
     }
 
     if (key.escape) {
-      if (searchQuery) {
-        setSearchQuery('');
-      }
+      if (searchQuery) setSearchQuery('');
       return;
     }
   });
 
   const filteredTickets = getFilteredTickets();
 
+  // --- Create ---
   if (mode === 'create') {
     return (
-      <Box flexDirection="column" width="100%" height={termHeight}>
+      <Box flexDirection="column" width={termWidth} height={termHeight}>
         <Header store={store} />
         <Box flexGrow={1} alignItems="center" justifyContent="center">
           <CreateModal
@@ -213,9 +273,10 @@ export function App() {
     );
   }
 
+  // --- Confirm Delete ---
   if (mode === 'confirm-delete' && deleteTarget) {
     return (
-      <Box flexDirection="column" width="100%" height={termHeight}>
+      <Box flexDirection="column" width={termWidth} height={termHeight}>
         <Header store={store} />
         <Box flexGrow={1} alignItems="center" justifyContent="center">
           <ConfirmDialog
@@ -239,23 +300,79 @@ export function App() {
     );
   }
 
-  if (mode === 'detail' && detailTicket) {
-    const fresh = store.tickets.find((t) => t.id === detailTicket.id);
-    if (fresh && fresh !== detailTicket) setDetailTicket(fresh);
-
+  // --- Inline Edit ---
+  if (mode === 'inline-edit' && editTarget) {
     return (
-      <Box flexDirection="column" width="100%" height={termHeight}>
+      <Box flexDirection="column" width={termWidth} height={termHeight}>
         <Header store={store} />
+        <InlineEdit
+          ticket={editTarget}
+          onSubmit={(newTitle) => {
+            editTicket(editTarget.id, { title: newTitle });
+            setEditTarget(null);
+            setMode('board');
+          }}
+          onCancel={() => {
+            setEditTarget(null);
+            setMode('board');
+          }}
+        />
+        <Board
+          tickets={filteredTickets}
+          activeColumn={activeColumn}
+          selectedIndices={selectedIndices}
+          termWidth={termWidth}
+          termHeight={termHeight - 1}
+        />
+        <Footer mode="board" />
+      </Box>
+    );
+  }
+
+  // --- Add Subtask ---
+  if (mode === 'add-subtask' && detailTicket) {
+    return (
+      <Box flexDirection="column" width={termWidth} height={termHeight}>
+        <Header store={store} />
+        <SubtaskInput
+          ticketId={detailTicket.id}
+          onSubmit={(title) => {
+            addSubtask(detailTicket.id, title);
+            refreshDetail();
+            setMode('detail');
+          }}
+          onCancel={() => setMode('detail')}
+        />
         <Box flexGrow={1} paddingX={1}>
-          <TicketDetail ticket={fresh ?? detailTicket} />
+          <TicketDetail ticket={detailTicket} subtasks={subtasks} selectedSubtask={selectedSubtask} />
         </Box>
         <Footer mode="detail" />
       </Box>
     );
   }
 
+  // --- Detail ---
+  if (mode === 'detail' && detailTicket) {
+    const fresh = store.tickets.find((t) => t.id === detailTicket.id);
+    if (fresh && fresh !== detailTicket) {
+      setDetailTicket(fresh);
+      setSubtasks(getSubtasks(fresh.id));
+    }
+
+    return (
+      <Box flexDirection="column" width={termWidth} height={termHeight}>
+        <Header store={store} />
+        <Box flexGrow={1} paddingX={1}>
+          <TicketDetail ticket={fresh ?? detailTicket} subtasks={subtasks} selectedSubtask={selectedSubtask} />
+        </Box>
+        <Footer mode="detail" />
+      </Box>
+    );
+  }
+
+  // --- Board ---
   return (
-    <Box flexDirection="column" width="100%" height={termHeight}>
+    <Box flexDirection="column" width={termWidth} height={termHeight}>
       <Header store={store} />
       {mode === 'search' ? (
         <SearchBar

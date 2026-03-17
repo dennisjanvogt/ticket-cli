@@ -9,26 +9,38 @@ export function Footer({ mode }: Props) {
   const shortcuts =
     mode === 'board'
       ? [
-          ['←→', 'Columns'],
-          ['↑↓', 'Navigate'],
+          ['←→', 'Cols'],
+          ['↑↓', 'Nav'],
           ['n', 'New'],
-          ['Enter', 'Details'],
-          ['m/d', 'Move →/←'],
-          ['x', 'Delete'],
+          ['Enter', 'Open'],
+          ['m/d', 'Move'],
+          ['p', 'Prio'],
+          ['e', 'Edit'],
+          ['x', 'Del'],
           ['/', 'Search'],
           ['q', 'Quit'],
         ]
-      : [['Esc', 'Back'], ['q', 'Quit']];
+      : mode === 'detail'
+        ? [
+            ['Esc', 'Back'],
+            ['m/d', 'Move'],
+            ['p', 'Prio'],
+            ['↑↓', 'Subtask'],
+            ['t', 'Toggle'],
+            ['a', 'Add'],
+            ['x', 'Del'],
+            ['q', 'Quit'],
+          ]
+        : [['Esc', 'Back'], ['q', 'Quit']];
 
   return (
-    <Box paddingX={1} marginTop={1}>
-      {shortcuts.map(([key, label], i) => (
-        <Box key={key} marginRight={2}>
+    <Box paddingX={1}>
+      {shortcuts.map(([key, label]) => (
+        <Box key={key} marginRight={1}>
           <Text bold color={colors.activeBorder}>
             {key}
           </Text>
           <Text dimColor> {label}</Text>
-          {i < shortcuts.length - 1 ? <Text dimColor> </Text> : null}
         </Box>
       ))}
     </Box>

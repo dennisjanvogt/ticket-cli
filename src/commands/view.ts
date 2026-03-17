@@ -1,6 +1,6 @@
-import { getTicket } from '../store.js';
+import { getTicket, getSubtasks } from '../store.js';
 import { COLUMN_LABELS } from '../types.js';
-import { PRIORITY_BADGE, formatRelativeDate } from '../utils/format.js';
+import { PRIORITY_BADGE, formatRelativeDate, formatDueDate } from '../utils/format.js';
 
 export function cmdView(args: string[]): void {
   const idStr = args[0];
@@ -25,6 +25,10 @@ export function cmdView(args: string[]): void {
   console.log(`│ Title:    ${t.title}`);
   console.log(`│ Column:   ${COLUMN_LABELS[t.column]}`);
   console.log(`│ Priority: ${PRIORITY_BADGE[t.priority]} ${t.priority}`);
+  if (t.due_date) {
+    const due = formatDueDate(t.due_date);
+    console.log(`│ Due:      ${t.due_date} (${due?.text})`);
+  }
   if (t.tags.length) {
     console.log(`│ Tags:     ${t.tags.map((tag) => `[${tag}]`).join(' ')}`);
   }
@@ -33,5 +37,15 @@ export function cmdView(args: string[]): void {
   }
   console.log(`│ Created:  ${formatRelativeDate(t.created_at)}`);
   console.log(`│ Updated:  ${formatRelativeDate(t.updated_at)}`);
+
+  const subtasks = getSubtasks(t.id);
+  if (subtasks.length > 0) {
+    console.log(`│`);
+    console.log(`│ Subtasks: [${subtasks.filter((s) => s.done).length}/${subtasks.length}]`);
+    for (const s of subtasks) {
+      const check = s.done ? '☑' : '☐';
+      console.log(`│   ${check} ${s.title}`);
+    }
+  }
   console.log(`└──────────────────────────────────`);
 }

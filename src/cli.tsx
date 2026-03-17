@@ -11,6 +11,7 @@ import { cmdDelete } from './commands/delete.js';
 import { cmdBoard } from './commands/board.js';
 import { cmdInfo } from './commands/info.js';
 import { cmdProjects } from './commands/projects.js';
+import { cmdSubtask } from './commands/subtask.js';
 
 const rawArgs = process.argv.slice(2);
 
@@ -49,6 +50,9 @@ switch (command) {
     break;
   case 'projects':
     cmdProjects(rest);
+    break;
+  case 'subtask':
+    cmdSubtask(rest);
     break;
   case 'info':
   case '--help':

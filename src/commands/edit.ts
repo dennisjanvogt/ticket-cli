@@ -5,7 +5,7 @@ import { COLUMNS } from '../types.js';
 export function cmdEdit(args: string[]): void {
   const idStr = args[0];
   if (!idStr) {
-    console.error('Usage: ticket edit <id> [--title "..."] [--desc "..."] [--priority ...] [--column ...] [--tag ...]');
+    console.error('Usage: ticket edit <id> [--title "..."] [--desc "..."] [--priority ...] [--column ...] [--tag ...] [--due YYYY-MM-DD|none]');
     process.exit(1);
   }
 
@@ -21,6 +21,7 @@ export function cmdEdit(args: string[]): void {
     priority?: Priority;
     column?: Column;
     tags?: string[];
+    due_date?: string | null;
   } = {};
 
   const tags: string[] = [];
@@ -44,6 +45,13 @@ export function cmdEdit(args: string[]): void {
     } else if (arg === '--tag' && args[i + 1]) {
       tags.push(args[++i]);
       hasTags = true;
+    } else if (arg === '--due' && args[i + 1]) {
+      const val = args[++i];
+      if (val === 'none' || val === 'clear') {
+        updates.due_date = null;
+      } else {
+        updates.due_date = val;
+      }
     }
   }
 

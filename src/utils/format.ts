@@ -24,6 +24,27 @@ export function formatRelativeDate(iso: string): string {
   return formatDate(iso);
 }
 
+export function formatDueDate(due: string | null): { text: string; color: string } | null {
+  if (!due) return null;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const target = new Date(due);
+  target.setHours(0, 0, 0, 0);
+  const diffMs = target.getTime() - now.getTime();
+  const days = Math.round(diffMs / 86400000);
+
+  if (days < 0) return { text: `${Math.abs(days)}d overdue`, color: '#ef4444' };
+  if (days === 0) return { text: 'today', color: '#ef4444' };
+  if (days <= 3) return { text: `in ${days}d`, color: '#eab308' };
+  return { text: `in ${days}d`, color: '#6b7280' };
+}
+
+export function progressBar(done: number, total: number, width: number = 8): string {
+  if (total === 0) return '';
+  const filled = Math.round((done / total) * width);
+  return '█'.repeat(filled) + '░'.repeat(width - filled);
+}
+
 export const PRIORITY_BADGE: Record<Priority, string> = {
   critical: '\x1b[31m◆\x1b[0m',
   high: '\x1b[33m●\x1b[0m',
