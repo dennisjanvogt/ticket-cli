@@ -13,8 +13,8 @@ interface Props {
 
 export function Board({ tickets, activeColumn, selectedIndices, termWidth, termHeight }: Props) {
   const colWidth = Math.max(20, Math.floor((termWidth - 2) / COLUMNS.length));
-  // Header=2, Footer=2, Search=1, Borders=2 → ~5 reserved
-  const maxHeight = Math.max(6, termHeight - 5);
+  // Header(1) + Footer(2) = 3 lines reserved from total
+  const boardHeight = Math.max(6, termHeight - 3);
 
   const grouped: Record<ColumnType, Ticket[]> = {
     backlog: [],
@@ -28,7 +28,7 @@ export function Board({ tickets, activeColumn, selectedIndices, termWidth, termH
   }
 
   return (
-    <Box flexDirection="row" flexGrow={1} paddingX={1}>
+    <Box flexDirection="row" height={boardHeight} paddingX={1}>
       {COLUMNS.map((col, i) => (
         <Column
           key={col}
@@ -37,7 +37,7 @@ export function Board({ tickets, activeColumn, selectedIndices, termWidth, termH
           isActive={i === activeColumn}
           selectedIndex={selectedIndices[col]}
           width={colWidth}
-          maxHeight={maxHeight}
+          maxHeight={boardHeight}
         />
       ))}
     </Box>

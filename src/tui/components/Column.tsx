@@ -21,18 +21,15 @@ export function Column({ column, tickets, isActive, selectedIndex, width, maxHei
   const borderColor = isActive ? colors.activeBorder : colors.inactiveBorder;
   const colColor = colors.column[column];
 
-  // Reserve: header line (1) + marginBottom (1) + border top/bottom (2) + pagination line (1) = 5
+  // Border (2) + header (1) + gap (1) + pagination footer (1) = 5 reserved lines
   const visibleCount = Math.max(1, maxHeight - 5);
   const total = sorted.length;
   const needsPagination = total > visibleCount;
 
-  // Keep selected item visible with scroll window
   let startIdx = 0;
   if (needsPagination) {
-    // Center the selected item when possible
     const half = Math.floor(visibleCount / 2);
     startIdx = Math.max(0, selectedIndex - half);
-    // Don't scroll past the end
     if (startIdx + visibleCount > total) {
       startIdx = Math.max(0, total - visibleCount);
     }
@@ -46,7 +43,7 @@ export function Column({ column, tickets, isActive, selectedIndex, width, maxHei
     <Box
       flexDirection="column"
       width={width}
-      flexGrow={1}
+      height={maxHeight}
       borderStyle="round"
       borderColor={borderColor}
       paddingX={1}
@@ -58,7 +55,7 @@ export function Column({ column, tickets, isActive, selectedIndex, width, maxHei
         <Text dimColor> ({total})</Text>
       </Box>
 
-      <Box flexDirection="column" flexGrow={1} marginTop={1}>
+      <Box flexDirection="column" marginTop={1}>
         {visible.length === 0 ? (
           <Text dimColor italic>
             empty

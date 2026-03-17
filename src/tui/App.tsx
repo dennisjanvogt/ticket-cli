@@ -197,7 +197,7 @@ export function App() {
 
   if (mode === 'create') {
     return (
-      <Box flexDirection="column" width="100%" height="100%">
+      <Box flexDirection="column" width="100%" height={termHeight}>
         <Header store={store} />
         <Box flexGrow={1} alignItems="center" justifyContent="center">
           <CreateModal
@@ -215,7 +215,7 @@ export function App() {
 
   if (mode === 'confirm-delete' && deleteTarget) {
     return (
-      <Box flexDirection="column" width="100%" height="100%">
+      <Box flexDirection="column" width="100%" height={termHeight}>
         <Header store={store} />
         <Box flexGrow={1} alignItems="center" justifyContent="center">
           <ConfirmDialog
@@ -244,7 +244,7 @@ export function App() {
     if (fresh && fresh !== detailTicket) setDetailTicket(fresh);
 
     return (
-      <Box flexDirection="column" width="100%" height="100%">
+      <Box flexDirection="column" width="100%" height={termHeight}>
         <Header store={store} />
         <Box flexGrow={1} paddingX={1}>
           <TicketDetail ticket={fresh ?? detailTicket} />
@@ -255,7 +255,7 @@ export function App() {
   }
 
   return (
-    <Box flexDirection="column" width="100%" height="100%">
+    <Box flexDirection="column" width="100%" height={termHeight}>
       <Header store={store} />
       {mode === 'search' ? (
         <SearchBar
