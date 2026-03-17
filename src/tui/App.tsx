@@ -197,15 +197,17 @@ export function App() {
 
   if (mode === 'create') {
     return (
-      <Box flexDirection="column">
+      <Box flexDirection="column" width="100%" height="100%">
         <Header store={store} />
-        <CreateModal
-          onSubmit={(data) => {
-            addTicket(data);
-            setMode('board');
-          }}
-          onCancel={() => setMode('board')}
-        />
+        <Box flexGrow={1} alignItems="center" justifyContent="center">
+          <CreateModal
+            onSubmit={(data) => {
+              addTicket(data);
+              setMode('board');
+            }}
+            onCancel={() => setMode('board')}
+          />
+        </Box>
         <Footer mode="create" />
       </Box>
     );
@@ -213,43 +215,47 @@ export function App() {
 
   if (mode === 'confirm-delete' && deleteTarget) {
     return (
-      <Box flexDirection="column">
+      <Box flexDirection="column" width="100%" height="100%">
         <Header store={store} />
-        <ConfirmDialog
-          message={`Delete #${deleteTarget.id} "${deleteTarget.title}"?`}
-          onConfirm={() => {
-            deleteTicket(deleteTarget.id);
-            const col = deleteTarget.column;
-            setDeleteTarget(null);
-            setMode('board');
-            setDetailTicket(null);
-            clampIndex(col);
-          }}
-          onCancel={() => {
-            setDeleteTarget(null);
-            setMode(detailTicket ? 'detail' : 'board');
-          }}
-        />
+        <Box flexGrow={1} alignItems="center" justifyContent="center">
+          <ConfirmDialog
+            message={`Delete #${deleteTarget.id} "${deleteTarget.title}"?`}
+            onConfirm={() => {
+              deleteTicket(deleteTarget.id);
+              const col = deleteTarget.column;
+              setDeleteTarget(null);
+              setMode('board');
+              setDetailTicket(null);
+              clampIndex(col);
+            }}
+            onCancel={() => {
+              setDeleteTarget(null);
+              setMode(detailTicket ? 'detail' : 'board');
+            }}
+          />
+        </Box>
+        <Footer mode="confirm" />
       </Box>
     );
   }
 
   if (mode === 'detail' && detailTicket) {
-    // Refresh from store
     const fresh = store.tickets.find((t) => t.id === detailTicket.id);
     if (fresh && fresh !== detailTicket) setDetailTicket(fresh);
 
     return (
-      <Box flexDirection="column">
+      <Box flexDirection="column" width="100%" height="100%">
         <Header store={store} />
-        <TicketDetail ticket={fresh ?? detailTicket} />
+        <Box flexGrow={1} paddingX={1}>
+          <TicketDetail ticket={fresh ?? detailTicket} />
+        </Box>
         <Footer mode="detail" />
       </Box>
     );
   }
 
   return (
-    <Box flexDirection="column">
+    <Box flexDirection="column" width="100%" height="100%">
       <Header store={store} />
       {mode === 'search' ? (
         <SearchBar

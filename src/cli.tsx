@@ -57,6 +57,13 @@ switch (command) {
     break;
   default:
     // No command or unknown → open TUI
-    render(React.createElement(App));
+    // Enter alternate screen buffer for fullscreen TUI
+    process.stdout.write('\x1b[?1049h');
+    process.stdout.write('\x1b[H');
+    const instance = render(React.createElement(App));
+    instance.waitUntilExit().then(() => {
+      // Restore main screen buffer
+      process.stdout.write('\x1b[?1049l');
+    });
     break;
 }

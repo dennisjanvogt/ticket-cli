@@ -21,47 +21,78 @@ export function Column({ column, tickets, isActive, selectedIndex, width, maxHei
   const borderColor = isActive ? colors.activeBorder : colors.inactiveBorder;
   const colColor = colors.column[column];
 
-  // Scroll if needed
-  const visibleCount = Math.max(1, maxHeight - 4);
+  // Reserve: header line (1) + marginBottom (1) + border top/bottom (2) + pagination line (1) = 5
+  const visibleCount = Math.max(1, maxHeight - 5);
+  const total = sorted.length;
+  const needsPagination = total > visibleCount;
+
+  // Keep selected item visible with scroll window
   let startIdx = 0;
-  if (selectedIndex >= visibleCount) {
-    startIdx = selectedIndex - visibleCount + 1;
+  if (needsPagination) {
+    // Center the selected item when possible
+    const half = Math.floor(visibleCount / 2);
+    startIdx = Math.max(0, selectedIndex - half);
+    // Don't scroll past the end
+    if (startIdx + visibleCount > total) {
+      startIdx = Math.max(0, total - visibleCount);
+    }
   }
+
   const visible = sorted.slice(startIdx, startIdx + visibleCount);
+  const hasAbove = startIdx > 0;
+  const hasBelow = startIdx + visibleCount < total;
 
   return (
     <Box
       flexDirection="column"
       width={width}
+      flexGrow={1}
       borderStyle="round"
       borderColor={borderColor}
       paddingX={1}
     >
-      <Box justifyContent="center" marginBottom={1}>
+      <Box justifyContent="center">
         <Text bold color={colColor}>
           {COLUMN_LABELS[column]}
         </Text>
-        <Text dimColor> ({tickets.length})</Text>
+        <Text dimColor> ({total})</Text>
       </Box>
-      {visible.length === 0 ? (
-        <Text dimColor italic>
-          empty
-        </Text>
-      ) : (
-        visible.map((ticket, i) => (
-          <TicketCard
-            key={ticket.id}
-            ticket={ticket}
-            isSelected={isActive && startIdx + i === selectedIndex}
-            maxWidth={width - 4}
-          />
-        ))
-      )}
-      {startIdx > 0 && (
-        <Text dimColor>↑ {startIdx} more</Text>
-      )}
-      {startIdx + visibleCount < sorted.length && (
-        <Text dimColor>↓ {sorted.length - startIdx - visibleCount} more</Text>
+
+      <Box flexDirection="column" flexGrow={1} marginTop={1}>
+        {visible.length === 0 ? (
+          <Text dimColor italic>
+            empty
+          </Text>
+        ) : (
+          <>
+            {hasAbove && (
+              <Text dimColor color={isActive ? colors.activeBorder : undefined}>
+                ▲ {startIdx} more
+              </Text>
+            )}
+            {visible.map((ticket, i) => (
+              <TicketCard
+                key={ticket.id}
+                ticket={ticket}
+                isSelected={isActive && startIdx + i === selectedIndex}
+                maxWidth={width - 4}
+              />
+            ))}
+            {hasBelow && (
+              <Text dimColor color={isActive ? colors.activeBorder : undefined}>
+                ▼ {total - startIdx - visibleCount} more
+              </Text>
+            )}
+          </>
+        )}
+      </Box>
+
+      {needsPagination && (
+        <Box justifyContent="center">
+          <Text dimColor>
+            {selectedIndex + 1}/{total}
+          </Text>
+        </Box>
       )}
     </Box>
   );
